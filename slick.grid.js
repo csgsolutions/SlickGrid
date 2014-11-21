@@ -1202,6 +1202,8 @@ if (typeof Slick === "undefined") {
     }
 
     function setColumns(columnDefinitions) {
+	  getEditorLock().cancelCurrentEdit();
+	
       columns = columnDefinitions;
 
       columnsById = {};
