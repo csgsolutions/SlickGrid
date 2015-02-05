@@ -415,6 +415,8 @@ if (typeof Slick === "undefined") {
         $headers.width(getHeadersWidth());
         viewportHasHScroll = (canvasWidth > viewportW - scrollbarDimensions.width);
       }
+	  
+	  viewportHasHScroll = (canvasWidth > viewportW - scrollbarDimensions.width);
 
       $headerRowSpacer.width(canvasWidth + (viewportHasVScroll ? scrollbarDimensions.width : 0));
 
