@@ -415,6 +415,8 @@ if (typeof Slick === "undefined") {
         $headers.width(getHeadersWidth());
         viewportHasHScroll = (canvasWidth > viewportW - scrollbarDimensions.width);
       }
+	  
+	  viewportHasHScroll = (canvasWidth > viewportW - scrollbarDimensions.width);
 
       $headerRowSpacer.width(canvasWidth + (viewportHasVScroll ? scrollbarDimensions.width : 0));
 
@@ -1202,6 +1204,8 @@ if (typeof Slick === "undefined") {
     }
 
     function setColumns(columnDefinitions) {
+	  getEditorLock().cancelCurrentEdit();
+	
       columns = columnDefinitions;
 
       columnsById = {};
