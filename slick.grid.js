@@ -181,6 +181,7 @@ if (typeof Slick === "undefined") {
     // See http://crbug.com/312427.
     var rowNodeFromLastMouseWheelEvent;  // this node must not be deleted while inertial scrolling
     var zombieRowNodeFromLastMouseWheelEvent;  // node that was hidden instead of getting deleted
+    var newItem;
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1287,6 +1288,10 @@ if (typeof Slick === "undefined") {
     }
 
     function getDataItem(i) {
+      if (options.enableAddRow && i === getDataLength()) {
+        newItem = newItem || {};
+        return newItem;
+      }
       if (data.getItem) {
         return data.getItem(i);
       } else {
@@ -3212,10 +3217,11 @@ if (typeof Slick === "undefined") {
               }
 
             } else {
-              var newItem = {};
-              currentEditor.applyValue(newItem, currentEditor.serializeValue());
+              var theNewItem = newItem;
+              newItem = null;
+              currentEditor.applyValue(theNewItem, currentEditor.serializeValue());
               makeActiveCellNormal();
-              trigger(self.onAddNewRow, {item: newItem, column: column});
+              trigger(self.onAddNewRow, {item: theNewItem, column: column});
             }
 
             // check whether the lock has been re-acquired by event handlers
@@ -3246,6 +3252,9 @@ if (typeof Slick === "undefined") {
     }
 
     function cancelCurrentEdit() {
+      if (newItem) {
+        newItem = null;
+      }
       makeActiveCellNormal();
       return true;
     }

@@ -1,0 +1,261 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid example 1: Basic grid</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <style>
+	#grid1 .slick-viewport {
+		box-sizing: border-box;		
+	}
+	
+	.slick-grids {
+		height: 500px;
+		background-color: #ababab;		
+	}
+	
+	.slick-grids > .slick-fixed {
+		background-color: #fefefe;
+		float: left;
+		width: 0;
+		height: 100%;
+		z-index: 1;
+	}
+	
+	.slick-grids > .slick-scroll {
+		background-color: #fefefe;
+		float: left;
+		height: 100%;
+		width: 100%;
+		z-index: 2;
+		margin-right: -17px;
+	}
+  </style>
+</head>
+<body>
+
+<div id="grids"></div>
+
+<div style="width: 800px; height: 500px; background-color: #fefefe; display:none;">
+	<div id="grid1" style="width:400px;height:483px;float:left;z-index:1;"></div>
+	<div id="grid2" style="width:417px;height:500px;float:left;margin-left: -17px;z-index:2"></div>
+</div>
+<div class="clear:both"></div>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+
+	  function syncScrollPosition(){
+		var i;
+		var elements = arguments;
+		var scrolling = null;
+		
+		function scrollHandler(e) {
+			if (!scrolling){
+				scrolling = e.target;
+			}			
+			$(elements).each(function(idx,el) {
+				if (el[0] === scrolling){
+					return;
+				}
+				var newTop = $(e.target).scrollTop() / $(e.target)[0].scrollHeight;
+				el.scrollTop(el[0].scrollHeight * newTop);		
+			});			
+			window.setTimeout(function(){				
+				scrolling = null;
+			}, 10);
+		}
+		
+		for (i = 0; i < arguments.length; i++){
+			$(arguments[i]).on('scroll', scrollHandler);
+		}		
+	  }
+  
+	function FixedColumnGridLayout(container, data, columns, options){
+		var leftGrid;
+		var $leftContainer;
+		var rightGrid;
+		var $rightContainer;
+		var scrollDims = measureScrollbar();		
+		var $container = $(container);
+		var subs = [];
+		var resizeHandle;
+		
+		function measureScrollbar() {
+		  var $c = $("<div style='position:absolute; top:-10000px; left:-10000px; width:100px; height:100px; overflow:scroll;'></div>").appendTo("body");
+		  var dim = {
+			width: $c.width() - $c[0].clientWidth,
+			height: $c.height() - $c[0].clientHeight
+		  };
+		  $c.remove();
+		  return dim;
+		}
+		
+		function separateColumns(columns){
+			var i;
+			var left = [];
+			var right = [];
+			for (var i = 0; i < columns.length; i++){
+				if (columns[i].fixed){
+					left.push(columns[i]);
+				} else {
+					right.push(columns[i]);
+				}
+			}
+			
+			return {
+				left: left,
+				right: right
+			};
+		}
+		
+		function getGridWidth(node){
+			return $(node).find('.grid-canvas')[0].offsetWidth;
+		}
+		
+		function resize(){
+			if (resizeHandle){
+				window.clearTimeout(resizeHandle);
+			}
+			
+			resizeHandle = window.setTimeout(function(){
+				var leftWidth;
+				var rightWidth = getGridWidth($rightContainer);
+				var containerHeight = $container[0].offsetHeight;
+			
+				leftGrid.invalidateAllRows();
+				leftGrid.resizeCanvas();
+				leftWidth = getGridWidth($leftContainer);
+				
+				$container.css({'padding-left': leftWidth + scrollDims.width });
+				$leftContainer.css({
+					'width': leftWidth+scrollDims.width, 
+					'margin-left': (leftWidth * -1)-scrollDims.width 
+				});
+												
+				rightGrid.invalidateAllRows();
+				rightGrid.resizeCanvas();
+				
+				// if the right side bottom scrollbar is shown
+				if (rightWidth > $rightContainer.find('.slick-viewport')[0].offsetWidth-scrollDims.width){
+					$leftContainer.css({'height': containerHeight-scrollDims.height});
+				} else {
+					$leftContainer.css({'height': containerHeight});
+				}
+				
+				leftGrid.invalidateAllRows();
+				leftGrid.resizeCanvas();
+				rightGrid.resizeCanvas();
+				
+				resizeHandle = null;	
+			}, 10);
+		}
+		
+		function init(){
+			var leftOptions = $({}).extend(options).extend({forceFitColumns: false});
+			var rightOptions = options;
+			var cols = separateColumns(columns);
+			
+			$container.addClass('slick-grids');
+			$leftContainer = $('<div class="slick-fixed"></div>').appendTo($container);
+			$rightContainer = $('<div class="slick-scroll"></div>')
+				.appendTo($container)
+				.css({'margin-left': -scrollDims.width});			
+			
+			leftGrid = new Slick.Grid($leftContainer, data, cols.left, leftOptions);
+			rightGrid = new Slick.Grid($rightContainer, data, cols.right, rightOptions);			
+	
+			subs.push(leftGrid.onColumnsResized.subscribe(resize));
+			subs.push(rightGrid.onColumnsResized.subscribe(resize));
+			
+			syncScrollPosition($leftContainer.find('.slick-viewport'), $rightContainer.find('.slick-viewport'));
+			
+			$leftContainer.toggle(cols.left.length > 0);
+			$(window).on('resize.twoup', function(){
+				resize();
+			});
+			
+			resize();
+		}
+				
+		this.getColumns = function(){
+			return columns;
+		};
+		
+		this.setColumns = function(cols){
+			var sep;
+			columns = cols;
+			sep = separateColumns(cols);
+			leftGrid.setColumns(sep.left);
+			rightGrid.setColumns(sep.right);
+		};
+		
+		this.destroy = function(){
+			var sub;
+			while (sub = subs.pop()){
+				sub.dispose();
+			}
+			leftGrid.destroy();
+			rightGrid.destroy();
+			$(window).off('.twoup');
+		};
+		
+		init();
+	}
+		
+	var columns = [
+		{id: "title", name: "Title", field: "title", fixed: true, width: 100},
+		{id: "finish", name: "Finish", field: "finish", fixed: false, width: 100},
+		{id: "title", name: "Title", field: "title"},
+		{id: "duration", name: "Duration", field: "duration"},
+		{id: "%", name: "% Complete", field: "percentComplete"},
+		{id: "start", name: "Start", field: "start"},
+		{id: "finish", name: "Finish", field: "finish"},
+		{id: "effort-driven", name: "Effort Driven", field: "effortDriven"}  
+	];
+  
+  var options = {
+    enableCellNavigation: true,
+    enableColumnReorder: true,
+	forceFitColumns: false
+  };
+
+  $(function () {
+    var data = [];
+    for (var i = 0; i < 500; i++) {
+      data[i] = {
+        title: "Task " + i,
+        duration: "5 days",
+        percentComplete: Math.round(Math.random() * 100),
+        start: "01/01/2009",
+        finish: "01/05/2009",
+        effortDriven: (i % 5 == 0)
+      };
+    }
+	
+	var layout = new FixedColumnGridLayout('#grids', data, columns, options);
+
+   /* var grid1 = new Slick.Grid("#grid1", data, leftColumns, leftOptions);
+	grid1.onDrag.subscribe(function(e){
+		console.log('drag start' + e);
+	});
+	grid1.onDragEnd.subscribe(function(e){
+		console.log('drag end' + e);
+	});
+	var grid2 = new Slick.Grid("#grid2", data, rightColumns, rightOptions);
+	
+	syncScrollPosition($('#grid1').find('.slick-viewport'), $('#grid2').find('.slick-viewport'));	
+	
+	*/
+  });
+</script>
+</body>
+</html>
